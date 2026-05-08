@@ -1,0 +1,187 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+* {
+  font-family: 'DM Sans', sans-serif;
+  box-sizing: border-box;
+}
+
+.font-display, h1, h2, h3 {
+  font-family: 'Cormorant Garamond', serif;
+}
+
+/* ── THÈME MALICHOU ── */
+.hero-gradient {
+  background: linear-gradient(135deg, #0d0505 0%, #1a0808 40%, #2d1015 100%);
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201, 149, 108, 0); }
+  50%       { box-shadow: 0 0 20px 4px rgba(201, 149, 108, 0.2); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Délais d'animation */
+.delay-100 { animation-delay: 0.1s; opacity: 0; }
+.delay-200 { animation-delay: 0.2s; opacity: 0; }
+.delay-300 { animation-delay: 0.3s; opacity: 0; }
+.delay-400 { animation-delay: 0.4s; opacity: 0; }
+.delay-500 { animation-delay: 0.5s; opacity: 0; }
+.delay-600 { animation-delay: 0.6s; opacity: 0; }
+
+/* ── CARDS ── */
+.card-hover {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 30px 60px rgba(201, 149, 108, 0.15);
+  border-color: rgba(201, 149, 108, 0.4) !important;
+}
+
+/* ── BOUTONS ── */
+.btn-primary {
+  background: linear-gradient(135deg, #c9956c, #d4a853) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  transition: all 0.3s ease !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-primary:hover::after {
+  left: 100%;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #a67550, #b8923f) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(201, 149, 108, 0.3) !important;
+}
+
+/* ── BADGES ── */
+.badge-primary {
+  background: linear-gradient(135deg, #c9956c, #d4a853) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+
+/* ── SKELETON LOADING ── */
+.skeleton {
+  background: linear-gradient(90deg, #1a1a18 25%, #2a2a28 50%, #1a1a18 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+/* ── NAVBAR ── */
+.navbar-scrolled {
+  background: rgba(13, 5, 5, 0.95) !important;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+}
+
+/* ── INPUTS ── */
+.input:focus, .textarea:focus, .select:focus {
+  border-color: #c9956c !important;
+  box-shadow: 0 0 0 2px rgba(201, 149, 108, 0.15) !important;
+  outline: none !important;
+}
+
+/* ── CHECKBOXES ── */
+.checkbox-primary:checked {
+  background-color: #c9956c !important;
+  border-color: #c9956c !important;
+}
+
+.range-primary {
+  accent-color: #c9956c;
+}
+
+/* ── STEPS ── */
+.step-primary::before,
+.step-primary + .step::before {
+  background-color: #c9956c !important;
+  color: #fff !important;
+}
+
+.step-primary::after {
+  background-color: #c9956c !important;
+  color: #fff !important;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #0d0505; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #c9956c, #d4a853);
+  border-radius: 3px;
+}
+
+/* ── TOAST ── */
+.alert-success {
+  background: linear-gradient(135deg, #1a1208, #2a1f10) !important;
+  border: 1px solid #c9956c !important;
+  color: #c9956c !important;
+}
+
+/* ── LINKS ── */
+a {
+  transition: opacity 0.2s ease;
+}
+
+/* ── DIVIDER ── */
+.divider::before, .divider::after {
+  background-color: rgba(201, 149, 108, 0.15) !important;
+}
+
+/* ── PAGE TRANSITIONS ── */
+.page-enter {
+  animation: fadeInUp 0.4s ease forwards;
+}
