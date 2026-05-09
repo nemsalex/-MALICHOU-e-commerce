@@ -150,3 +150,8 @@ STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
 # ─── CINETPAY ──────────────────────────────────────────
 CINETPAY_API_KEY = os.getenv('CINETPAY_API_KEY')
 CINETPAY_SITE_ID = os.getenv('CINETPAY_SITE_ID')
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.railway.app',
+    'https://*.vercel.app',
+]
