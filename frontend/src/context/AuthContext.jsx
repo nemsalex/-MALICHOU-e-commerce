@@ -38,9 +38,9 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (username, email, password, password2, phone = '') => {
-    await api.post('/auth/register/', { username, email, password, password2, phone });
-    // Pas de login automatique — redirige vers /login
-  };
+  await api.post('/auth/register/', { username, email, password, password2, phone });
+  await login(username, password);
+};
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, register }}>

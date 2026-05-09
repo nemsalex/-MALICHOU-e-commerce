@@ -23,7 +23,7 @@ export default function Register() {
     setError('');
     try {
       await register(form.username, form.email, form.password, form.password2, form.phone);
-      navigate('/login?registered=true');
+      navigate('/');
     } catch (err) {
       const data = err.response?.data;
       if (data) {
