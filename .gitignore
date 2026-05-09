@@ -13,7 +13,7 @@ dist/
 dist-ssr/
 *.local
 .env.local
-.env.production
+
 
 # Python / Django / Flask
 venv/

@@ -24,8 +24,14 @@ export default function Register() {
     try {
       await register(form.username, form.email, form.password, form.password2, form.phone);
       navigate('/');
-    } catch {
-      setError("Erreur lors de l'inscription. Vérifiez les champs.");
+    } catch (err) {
+      const data = err.response?.data;
+      if (data) {
+        const messages = Object.values(data).flat().join(' ');
+        setError(messages);
+      } else {
+        setError("Erreur lors de l'inscription. Vérifiez les champs.");
+      }
     } finally {
       setLoading(false);
     }
@@ -40,7 +46,11 @@ export default function Register() {
             <p className="text-xs uppercase tracking-widest opacity-40 mt-2">Créer un compte</p>
           </div>
 
-          {error && <div className="alert alert-error mb-4 text-sm"><span>{error}</span></div>}
+          {error && (
+            <div className="alert alert-error mb-4 text-sm">
+              <span>{error}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {[
@@ -49,12 +59,17 @@ export default function Register() {
               { key:'phone',    label:'Téléphone',          type:'tel' },
             ].map(f => (
               <fieldset key={f.key} className="fieldset">
-                <legend className="fieldset-legend text-xs uppercase tracking-widest opacity-60">{f.label}</legend>
-                <input type={f.type} className="input input-bordered w-full"
+                <legend className="fieldset-legend text-xs uppercase tracking-widest opacity-60">
+                  {f.label}
+                </legend>
+                <input
+                  type={f.type}
+                  className="input input-bordered w-full"
                   placeholder={f.key === 'phone' ? '+226 XX XX XX XX' : ''}
                   value={form[f.key]}
                   onChange={e => setForm({...form, [f.key]: e.target.value})}
-                  required={f.key !== 'phone'}/>
+                  required={f.key !== 'phone'}
+                />
               </fieldset>
             ))}
 
@@ -64,13 +79,17 @@ export default function Register() {
                   {i === 0 ? 'Mot de passe' : 'Confirmer le mot de passe'}
                 </legend>
                 <div className="relative">
-                  <input type={showPwd ? 'text' : 'password'}
+                  <input
+                    type={showPwd ? 'text' : 'password'}
                     className="input input-bordered w-full pr-12"
                     value={form[k]}
                     onChange={e => setForm({...form, [k]: e.target.value})}
-                    required/>
+                    required
+                  />
                   {i === 0 && (
-                    <button type="button" onClick={() => setShowPwd(!showPwd)}
+                    <button
+                      type="button"
+                      onClick={() => setShowPwd(!showPwd)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-70">
                       {showPwd ? <EyeOff size={16}/> : <Eye size={16}/>}
                     </button>
@@ -79,7 +98,8 @@ export default function Register() {
               </fieldset>
             ))}
 
-            <button type="submit"
+            <button
+              type="submit"
               className={`btn btn-primary w-full uppercase tracking-widest mt-2 ${loading ? 'loading' : ''}`}>
               {!loading && <><UserPlus size={16}/> Créer mon compte</>}
             </button>

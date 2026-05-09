@@ -12,7 +12,11 @@ export function AuthProvider({ children }) {
     if (token) {
       api.get('/auth/me/')
         .then(res => setUser(res.data))
-        .catch(() => setUser(null))
+        .catch(() => {
+          setUser(null);
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+        })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -35,6 +39,7 @@ export function AuthProvider({ children }) {
 
   const register = async (username, email, password, password2, phone = '') => {
     await api.post('/auth/register/', { username, email, password, password2, phone });
+    await new Promise(resolve => setTimeout(resolve, 800));
     await login(username, password);
   };
 
