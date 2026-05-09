@@ -1,8 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Category, Product, Cart, CartItem, Order, OrderItem, Review
-from .emails import send_welcome_email, send_new_user_notification
 from .models import Category, Product, Cart, CartItem, Order, OrderItem, Review, UserProfile
+from .emails import send_welcome_email, send_new_user_notification
 
 
 # ─── AUTH ──────────────────────────────────────────────
@@ -25,9 +24,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         phone = validated_data.pop('phone', '')
         user  = User.objects.create_user(**validated_data)
         UserProfile.objects.create(user=user, phone=phone)
-        send_welcome_email(user)
-        send_new_user_notification(user)
-        return user        
+        try:
+            send_welcome_email(user)
+            send_new_user_notification(user)
+        except Exception:
+            pass  # Email échoue mais inscription continue
+        return user
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -43,17 +45,12 @@ class UserSerializer(serializers.ModelSerializer):
         except:
             return ''
 
-class UserProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model  = UserProfile
-        fields = ('phone',)
-
 
 # ─── CATEGORIES ────────────────────────────────────────
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model  = Category
-        fields = ('id', 'name', 'slug')
+        fields = ('id', 'name', 'slug', 'image')
 
 
 # ─── PRODUITS ──────────────────────────────────────────
@@ -106,6 +103,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         model  = OrderItem
         fields = ('id', 'product', 'size', 'quantity', 'price', 'subtotal')
 
+
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
 
@@ -113,6 +111,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model  = Order
         fields = ('id', 'status', 'payment_method', 'payment_status',
                   'total', 'address', 'items', 'created_at')
+
 
 # ─── AVIS ──────────────────────────────────────────────
 class ReviewSerializer(serializers.ModelSerializer):
@@ -149,3 +148,10 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
     def get_review_count(self, obj):
         return obj.reviews.count()
+
+
+# ─── PROFIL ────────────────────────────────────────────
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = UserProfile
+        fields = ('phone',)
