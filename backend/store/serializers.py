@@ -9,45 +9,6 @@ from .models import Category, Product, Cart, CartItem, Order, OrderItem, Review,
 class RegisterSerializer(serializers.ModelSerializer):
     password  = serializers.CharField(write_only=True, min_length=6)
     password2 = serializers.CharField(write_only=True)
-
-    class Meta:
-        model  = User
-        fields = ('username', 'email', 'password', 'password2')
-
-    def validate(self, data):
-        if data['password'] != data['password2']:
-            raise serializers.ValidationError("Les mots de passe ne correspondent pas.")
-        return data
-
-    def create(self, validated_data):
-        validated_data.pop('password2')
-        user = User.objects.create_user(**validated_data)
-        send_welcome_email(user)
-        send_new_user_notification(user)
-        return user
-
-
-class UserSerializer(serializers.ModelSerializer):
-    phone = serializers.SerializerMethodField()
-
-    class Meta:
-        model  = User
-        fields = ('id', 'username', 'email', 'phone')
-
-    def get_phone(self, obj):
-        try:
-            return obj.profile.phone
-        except:
-            return ''
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model  = UserProfile
-        fields = ('phone',)
-
-class RegisterSerializer(serializers.ModelSerializer):
-    password  = serializers.CharField(write_only=True, min_length=6)
-    password2 = serializers.CharField(write_only=True)
     phone     = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
@@ -67,6 +28,25 @@ class RegisterSerializer(serializers.ModelSerializer):
         send_welcome_email(user)
         send_new_user_notification(user)
         return user        
+
+
+class UserSerializer(serializers.ModelSerializer):
+    phone = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = User
+        fields = ('id', 'username', 'email', 'phone')
+
+    def get_phone(self, obj):
+        try:
+            return obj.profile.phone
+        except:
+            return ''
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = UserProfile
+        fields = ('phone',)
 
 
 # ─── CATEGORIES ────────────────────────────────────────
