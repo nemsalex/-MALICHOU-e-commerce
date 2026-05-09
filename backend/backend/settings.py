@@ -158,7 +158,3 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 
-# ─── EMAIL EN PRODUCTION ───────────────────────────────
-if not DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
- 
