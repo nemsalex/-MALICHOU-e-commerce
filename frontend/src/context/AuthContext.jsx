@@ -39,8 +39,7 @@ export function AuthProvider({ children }) {
 
   const register = async (username, email, password, password2, phone = '') => {
     await api.post('/auth/register/', { username, email, password, password2, phone });
-    await new Promise(resolve => setTimeout(resolve, 800));
-    await login(username, password);
+    // Pas de login automatique — redirige vers /login
   };
 
   return (

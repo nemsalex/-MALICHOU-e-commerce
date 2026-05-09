@@ -23,7 +23,7 @@ export default function Register() {
     setError('');
     try {
       await register(form.username, form.email, form.password, form.password2, form.phone);
-      navigate('/');
+      navigate('/login?registered=true');
     } catch (err) {
       const data = err.response?.data;
       if (data) {
@@ -42,7 +42,9 @@ export default function Register() {
       <div className="card bg-base-100 w-full max-w-md shadow-2xl border border-base-200">
         <div className="card-body p-8">
           <div className="text-center mb-8">
-            <Link to="/" className="font-display text-3xl font-semibold tracking-widest">MALICHOU</Link>
+            <Link to="/" className="font-display text-3xl font-semibold tracking-widest">
+              MALICHOU
+            </Link>
             <p className="text-xs uppercase tracking-widest opacity-40 mt-2">Créer un compte</p>
           </div>
 
