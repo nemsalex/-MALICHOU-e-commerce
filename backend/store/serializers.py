@@ -25,8 +25,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         phone = validated_data.pop('phone', '')
         user  = User.objects.create_user(**validated_data)
         UserProfile.objects.create(user=user, phone=phone)
-        # send_welcome_email(user)
-        # send_new_user_notification(user)
+        send_welcome_email(user)
+        send_new_user_notification(user)
         return user        
 
 
