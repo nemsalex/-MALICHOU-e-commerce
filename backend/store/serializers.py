@@ -54,7 +54,7 @@ class UserSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model  = Category
-        fields = ('id', 'name', 'slug', 'image')
+        fields = ('id', 'name', 'slug',)
 
 
 # ─── PRODUITS ──────────────────────────────────────────
