@@ -11,31 +11,6 @@ from .views import (
     CinetPayInitView, CinetPayNotifyView,
 )
 
-from django.http import JsonResponse
-from django.core.mail import send_mail
-from django.conf import settings
-
-def test_email(request):
-    try:
-        send_mail(
-            'Test MALICHOU',
-            'Email de test depuis Railway',
-            settings.DEFAULT_FROM_EMAIL,
-            [settings.ADMIN_EMAIL],
-            fail_silently=False,
-        )
-        return JsonResponse({'status': 'Email envoyé !'})
-    except Exception as e:
-        return JsonResponse({'error': str(e)})
-
-
-
-
-
-
-
-
-
 urlpatterns = [
     # Auth
     path('auth/register/',    RegisterView.as_view(),       name='register'),
@@ -68,5 +43,4 @@ urlpatterns = [
     path('payment/cash/',            CreateCashOrderView.as_view(),     name='payment-cash'),
     path('payment/cinetpay/',        CinetPayInitView.as_view(),        name='cinetpay-init'),
     path('payment/cinetpay/notify/', CinetPayNotifyView.as_view(),      name='cinetpay-notify'),
-    path('test-email/', test_email, name='test-email'),
 ]
