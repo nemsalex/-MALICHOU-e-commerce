@@ -1,3 +1,4 @@
+import threading
 from django.contrib.auth.models import User
 from rest_framework import generics, permissions
 from rest_framework.response import Response
@@ -35,8 +36,7 @@ class MeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+        return Response(UserSerializer(request.user).data)
 
 
 class UpdateProfileView(APIView):
@@ -44,18 +44,14 @@ class UpdateProfileView(APIView):
 
     def patch(self, request):
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
-
         phone = request.data.get('phone', '')
         email = request.data.get('email', '')
-
         if phone:
             profile.phone = phone
             profile.save()
-
         if email:
             request.user.email = email
             request.user.save()
-
         return Response(UserSerializer(request.user).data)
 
 
@@ -65,13 +61,10 @@ class ChangePasswordView(APIView):
     def post(self, request):
         old_password = request.data.get('old_password', '')
         new_password = request.data.get('new_password', '')
-
         if not request.user.check_password(old_password):
             return Response({'error': 'Ancien mot de passe incorrect.'}, status=400)
-
         if len(new_password) < 6:
             return Response({'error': 'Le mot de passe doit faire au moins 6 caractères.'}, status=400)
-
         request.user.set_password(new_password)
         request.user.save()
         return Response({'message': 'Mot de passe modifié avec succès.'})
@@ -236,8 +229,15 @@ class OrderListView(APIView):
             )
 
         cart.items.all().delete()
-        send_order_confirmation(order)
-        send_order_notification_admin(order)
+
+        def send_emails():
+            try:
+                send_order_confirmation(order)
+                send_order_notification_admin(order)
+            except Exception:
+                pass
+        threading.Thread(target=send_emails, daemon=True).start()
+
         return Response(OrderSerializer(order).data, status=201)
 
 
@@ -262,7 +262,13 @@ class ContactView(APIView):
         if not all([name, email, subject, message]):
             return Response({'error': 'Tous les champs sont requis.'}, status=400)
 
-        send_contact_email(name, email, subject, message)
+        def send_emails():
+            try:
+                send_contact_email(name, email, subject, message)
+            except Exception:
+                pass
+        threading.Thread(target=send_emails, daemon=True).start()
+
         return Response({'message': 'Message envoyé avec succès.'})
 
 
@@ -290,9 +296,9 @@ class CreatePaymentIntentView(APIView):
         )
 
         return Response({
-            'client_secret':    intent.client_secret,
-            'amount':           amount,
-            'publishable_key':  settings.STRIPE_PUBLISHABLE_KEY,
+            'client_secret':   intent.client_secret,
+            'amount':          amount,
+            'publishable_key': settings.STRIPE_PUBLISHABLE_KEY,
         })
 
 
@@ -329,8 +335,15 @@ class CreateCashOrderView(APIView):
             )
 
         cart.items.all().delete()
-        send_order_confirmation(order)
-        send_order_notification_admin(order)
+
+        def send_emails():
+            try:
+                send_order_confirmation(order)
+                send_order_notification_admin(order)
+            except Exception:
+                pass
+        threading.Thread(target=send_emails, daemon=True).start()
+
         return Response(OrderSerializer(order).data, status=201)
 
 
@@ -357,8 +370,8 @@ class CinetPayInitView(APIView):
             "amount":         amount,
             "currency":       "XOF",
             "description":    "Commande MALICHOU",
-            "return_url":     "http://localhost:5173/checkout/success",
-            "notify_url":     "http://127.0.0.1:8000/api/payment/cinetpay/notify/",
+            "return_url":     "https://malichou-e-commerce.vercel.app/checkout/success",
+            "notify_url":     "https://malichou-e-commerce-production.up.railway.app/api/payment/cinetpay/notify/",
             "customer_name":  request.user.username,
             "customer_email": request.user.email,
         }
@@ -416,8 +429,14 @@ class CinetPayNotifyView(APIView):
                     )
 
                 cart.items.all().delete()
-                send_order_confirmation(order)
-                send_order_notification_admin(order)
+
+                def send_emails():
+                    try:
+                        send_order_confirmation(order)
+                        send_order_notification_admin(order)
+                    except Exception:
+                        pass
+                threading.Thread(target=send_emails, daemon=True).start()
 
             except Exception as e:
                 return Response({'error': str(e)}, status=500)

@@ -1,3 +1,4 @@
+import threading
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import Category, Product, Cart, CartItem, Order, OrderItem, Review, UserProfile
@@ -24,11 +25,14 @@ class RegisterSerializer(serializers.ModelSerializer):
         phone = validated_data.pop('phone', '')
         user  = User.objects.create_user(**validated_data)
         UserProfile.objects.create(user=user, phone=phone)
-        try:
-            send_welcome_email(user)
-            send_new_user_notification(user)
-        except Exception:
-            pass  # Email échoue mais inscription continue
+
+        def send_emails():
+            try:
+                send_welcome_email(user)
+                send_new_user_notification(user)
+            except Exception:
+                pass
+        threading.Thread(target=send_emails, daemon=True).start()
         return user
 
 
@@ -42,7 +46,7 @@ class UserSerializer(serializers.ModelSerializer):
     def get_phone(self, obj):
         try:
             return obj.profile.phone
-        except:
+        except Exception:
             return ''
 
 
