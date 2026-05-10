@@ -109,6 +109,11 @@ export default function Home() {
               ))}
             </div>
           )}
+          {p.stock === 0 && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <span className="badge badge-error uppercase tracking-widest">Rupture de stock</span>
+            </div>
+          )}
         </figure>
         <div className="card-body p-5">
           <p className="text-xs uppercase tracking-widest opacity-40">{p.category?.name}</p>

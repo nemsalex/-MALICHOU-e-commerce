@@ -6,10 +6,13 @@ import Navbar from '../components/Navbar';
 import api from '../api';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import PhoneInput   from '../components/PhoneInput';
+import AddressInput from '../components/AddressInput';
 import {
   CreditCard, Banknote, Smartphone,
   MapPin, CheckCircle, ArrowLeft, Phone
 } from 'lucide-react';
+
 
 function StripeForm({ clientSecret, onSuccess }) {
   const stripe   = useStripe();
@@ -193,12 +196,7 @@ export default function Checkout() {
                 <p className="text-xs uppercase tracking-widest opacity-40 mb-3 flex items-center gap-2">
                   <MapPin size={12}/> Adresse de livraison
                 </p>
-                <textarea
-                  className="textarea textarea-bordered w-full h-24 text-sm"
-                  placeholder="Votre adresse complète (quartier, rue, ville...)"
-                  value={address}
-                  onChange={e => setAddress(e.target.value)}
-                />
+                <AddressInput value={address} onChange={setAddress}/>
               </div>
 
               {/* TÉLÉPHONE */}
@@ -206,13 +204,7 @@ export default function Checkout() {
                 <p className="text-xs uppercase tracking-widest opacity-40 mb-3 flex items-center gap-2">
                   <Phone size={12}/> Numéro de téléphone
                 </p>
-                <input
-                  type="tel"
-                  className="input input-bordered w-full text-sm"
-                  placeholder="+226 XX XX XX XX"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                />
+                <PhoneInput value={phone} onChange={setPhone}/>
               </div>
 
               {/* MÉTHODE DE PAIEMENT */}

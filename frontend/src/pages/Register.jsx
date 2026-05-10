@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PhoneInput from '../components/PhoneInput';
 import { UserPlus, Eye, EyeOff } from 'lucide-react';
 
 export default function Register() {
@@ -58,7 +59,6 @@ export default function Register() {
             {[
               { key:'username', label:"Nom d'utilisateur", type:'text' },
               { key:'email',    label:'Email',              type:'email' },
-              { key:'phone',    label:'Téléphone',          type:'tel' },
             ].map(f => (
               <fieldset key={f.key} className="fieldset">
                 <legend className="fieldset-legend text-xs uppercase tracking-widest opacity-60">
@@ -67,13 +67,20 @@ export default function Register() {
                 <input
                   type={f.type}
                   className="input input-bordered w-full"
-                  placeholder={f.key === 'phone' ? '+226 XX XX XX XX' : ''}
                   value={form[f.key]}
                   onChange={e => setForm({...form, [f.key]: e.target.value})}
-                  required={f.key !== 'phone'}
+                  required
                 />
               </fieldset>
             ))}
+
+            <div key="phone">
+              <p className="text-xs uppercase tracking-widest opacity-60 mb-2">Téléphone</p>
+              <PhoneInput
+                value={form.phone}
+                onChange={val => setForm({...form, phone: val})}
+              />
+            </div>
 
             {['password','password2'].map((k, i) => (
               <fieldset key={k} className="fieldset">

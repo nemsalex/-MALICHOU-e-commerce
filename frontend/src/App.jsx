@@ -13,6 +13,7 @@ import Collection     from './pages/Collection';
 import Profile        from './pages/Profile';
 import ErrorBoundary  from './components/ErrorBoundary';
 import ScrollToTop    from './components/ScrollToTop';
+import WhatsAppButton from './components/WhatsAppButton';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
           <ScrollToTop />
+          <WhatsAppButton number="22664735227" />  
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>
