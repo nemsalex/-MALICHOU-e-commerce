@@ -135,15 +135,16 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 
 # ─── EMAIL ─────────────────────────────────────────────
+
 EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST          = 'smtp.gmail.com'
-EMAIL_PORT          = 587
-EMAIL_USE_TLS       = True
+EMAIL_PORT          = 465
+EMAIL_USE_SSL       = True
+EMAIL_USE_TLS       = False
 EMAIL_HOST_USER     = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL  = os.getenv('EMAIL_HOST_USER')
 ADMIN_EMAIL         = os.getenv('ADMIN_EMAIL')
-
 # ─── STRIPE ────────────────────────────────────────────
 STRIPE_SECRET_KEY      = os.getenv('STRIPE_SECRET_KEY')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
