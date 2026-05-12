@@ -125,11 +125,13 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:5173',
     'http://localhost:3000',
     'https://malichou-e-commerce.vercel.app',
+    'https://malichou-backend.onrender.com',
 ]
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.vercel\.app$",
     r"^https://.*\.railway\.app$",
+    r"^https://.*\.onrender\.com$",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
