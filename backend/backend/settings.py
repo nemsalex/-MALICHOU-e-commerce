@@ -153,6 +153,7 @@ CINETPAY_SITE_ID = os.getenv('CINETPAY_SITE_ID')
 CSRF_TRUSTED_ORIGINS = [
     'https://*.railway.app',
     'https://*.vercel.app',
+    'https://*.onrender.com',
 ]
 
 
