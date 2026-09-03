@@ -83,7 +83,7 @@ class ProductListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        queryset = Product.objects.filter(is_active=True)
+        queryset = Product.objects.filter(is_active=True).select_related('category')
         category = self.request.query_params.get('category')
         if category:
             queryset = queryset.filter(category__slug=category)
@@ -98,11 +98,12 @@ class FeaturedProductsView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        return Product.objects.filter(is_active=True, is_featured=True)[:8]
+        return Product.objects.filter(is_active=True, is_featured=True).select_related('category')[:8]
 
 
 class ProductDetailView(generics.RetrieveAPIView):
-    queryset           = Product.objects.filter(is_active=True)
+    queryset = Product.objects.filter(is_active=True).select_related('category') \
+        .prefetch_related('reviews__user')
     serializer_class   = ProductDetailSerializer
     permission_classes = [permissions.AllowAny]
     lookup_field       = 'slug'
@@ -139,7 +140,7 @@ class CartView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        cart, _ = Cart.objects.get_or_create(user=request.user)
+        cart, _ = Cart.objects.prefetch_related('items__product__category').get_or_create(user=request.user)
         return Response(CartSerializer(cart).data)
 
     def post(self, request):
@@ -161,6 +162,8 @@ class CartView(APIView):
         else:
             item.quantity = quantity
         item.save()
+
+        cart = Cart.objects.prefetch_related('items__product__category').get(pk=cart.pk)
         return Response(CartSerializer(cart).data)
 
     def delete(self, request):
@@ -189,7 +192,7 @@ class CartItemView(APIView):
             else:
                 item.quantity = int(qty)
                 item.save()
-            cart = Cart.objects.get(user=request.user)
+            cart = Cart.objects.prefetch_related('items__product__category').get(user=request.user)
             return Response(CartSerializer(cart).data)
         except CartItem.DoesNotExist:
             return Response({'error': 'Article introuvable.'}, status=404)
@@ -200,7 +203,8 @@ class OrderListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        orders = Order.objects.filter(user=request.user).order_by('-created_at')
+        orders = Order.objects.filter(user=request.user) \
+            .prefetch_related('items__product__category').order_by('-created_at')
         return Response(OrderSerializer(orders, many=True).data)
 
     def post(self, request):
@@ -246,7 +250,7 @@ class OrderDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
+        return Order.objects.filter(user=self.request.user).prefetch_related('items__product__category')
 
 
 # ─── CONTACT ───────────────────────────────────────────
