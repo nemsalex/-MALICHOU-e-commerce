@@ -79,8 +79,7 @@ class CartItem(models.Model):
 class Order(models.Model):
     PAYMENT_CHOICES = [
         ('cash',   'Espèces à la livraison'),
-        ('card',   'Carte bancaire'),
-        ('mobile', 'Mobile Money'),
+        ('online', 'Paiement en ligne (Mobile Money / Carte) — PayDunya'),
     ]
     STATUS_CHOICES = [
         ('pending',    'En attente'),
@@ -94,6 +93,7 @@ class Order(models.Model):
     status          = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_method  = models.CharField(max_length=10, choices=PAYMENT_CHOICES, default='cash')
     payment_status  = models.CharField(max_length=20, default='unpaid')
+    payment_ref     = models.CharField(max_length=100, blank=True)  # token facture PayDunya
     total           = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     address         = models.TextField(blank=True)
     created_at      = models.DateTimeField(auto_now_add=True)

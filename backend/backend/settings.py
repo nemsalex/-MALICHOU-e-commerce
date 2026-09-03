@@ -126,6 +126,8 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://localhost:5183',
+    'http://127.0.0.1:5183',
     'http://localhost:3000',
     'https://malichou-e-commerce.vercel.app',
     'https://malichou-backend.onrender.com',
@@ -145,13 +147,16 @@ SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
 DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER')
 ADMIN_EMAIL        = os.getenv('ADMIN_EMAIL')
 SENDGRID_SANDBOX_MODE_IN_DEBUG = False
-# ─── STRIPE ────────────────────────────────────────────
-STRIPE_SECRET_KEY      = os.getenv('STRIPE_SECRET_KEY')
-STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
+# ─── PAYDUNYA ──────────────────────────────────────────
+PAYDUNYA_MASTER_KEY  = os.getenv('PAYDUNYA_MASTER_KEY')
+PAYDUNYA_PRIVATE_KEY = os.getenv('PAYDUNYA_PRIVATE_KEY')
+PAYDUNYA_PUBLIC_KEY  = os.getenv('PAYDUNYA_PUBLIC_KEY')
+PAYDUNYA_TOKEN       = os.getenv('PAYDUNYA_TOKEN')
+PAYDUNYA_MODE        = os.getenv('PAYDUNYA_MODE', 'test')  # 'test' ou 'live'
 
-# ─── CINETPAY ──────────────────────────────────────────
-CINETPAY_API_KEY = os.getenv('CINETPAY_API_KEY')
-CINETPAY_SITE_ID = os.getenv('CINETPAY_SITE_ID')
+# ─── URLS FRONT / BACK (pour les redirections de paiement) ──
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://malichou-e-commerce.vercel.app')
+BACKEND_URL  = os.getenv('BACKEND_URL',  'https://malichou-backend.onrender.com')
 
 CSRF_TRUSTED_ORIGINS = [
     'https://*.railway.app',

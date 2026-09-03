@@ -9,6 +9,7 @@ import Orders         from './pages/Orders';
 import Contact        from './pages/Contact';
 import ProductDetail  from './pages/ProductDetail';
 import Checkout       from './pages/Checkout';
+import CheckoutConfirmation from './pages/CheckoutConfirmation';
 import Collection     from './pages/Collection';
 import Profile        from './pages/Profile';
 import ErrorBoundary  from './components/ErrorBoundary';
@@ -30,6 +31,7 @@ function App() {
             <Route path="/collection" element={<Collection />} />
             <Route path="/profile"   element={<Profile />} />
             <Route path="/checkout"  element={<Checkout />} />
+            <Route path="/checkout/confirmation/:orderId" element={<CheckoutConfirmation />} />
             <Route path="/products/:slug" element={
               <ErrorBoundary>
                 <ProductDetail />

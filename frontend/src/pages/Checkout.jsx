@@ -1,83 +1,30 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import api from '../api';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import PhoneInput   from '../components/PhoneInput';
 import AddressInput from '../components/AddressInput';
 import {
-  CreditCard, Banknote, Smartphone,
-  MapPin, CheckCircle, ArrowLeft, Phone
+  Banknote, Smartphone,
+  MapPin, CheckCircle, Phone
 } from 'lucide-react';
 
-
-function StripeForm({ clientSecret, onSuccess }) {
-  const stripe   = useStripe();
-  const elements = useElements();
+export default function Checkout() {
+  const { cart, fetchCart }  = useCart();
+  const { user }              = useAuth();
+  const [address, setAddress] = useState('');
+  const [phone,   setPhone]   = useState(user?.phone || '');
+  const [method,  setMethod]  = useState('cash');
+  const [step,    setStep]    = useState(1);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-    setLoading(true);
-    setError('');
-
-    const result = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: { card: elements.getElement(CardElement) }
-    });
-
-    if (result.error) {
-      setError(result.error.message);
-      setLoading(false);
-    } else if (result.paymentIntent.status === 'succeeded') {
-      onSuccess('card');
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="p-4 border border-base-300 rounded">
-        <CardElement options={{
-          style: {
-            base: {
-              fontSize: '16px',
-              color: '#ffffff',
-              '::placeholder': { color: '#666' },
-            }
-          }
-        }}/>
-      </div>
-      {error && <p className="text-error text-sm">{error}</p>}
-      <button type="submit" disabled={!stripe || loading}
-        className={`btn btn-primary w-full uppercase tracking-widest ${loading ? 'loading' : ''}`}>
-        {!loading && <><CreditCard size={16}/> Payer maintenant</>}
-      </button>
-    </form>
-  );
-}
-
-export default function Checkout() {
-  const { cart, fetchCart }        = useCart();
-  const { user }                   = useAuth();
-  const navigate                   = useNavigate();
-  const [address,       setAddress]      = useState('');
-  const [phone,         setPhone]        = useState(user?.phone || '');
-  const [method,        setMethod]       = useState('cash');
-  const [step,          setStep]         = useState(1);
-  const [loading,       setLoading]      = useState(false);
-  const [error,         setError]        = useState('');
-  const [stripePromise, setStripePromise]= useState(null);
-  const [clientSecret,  setClientSecret] = useState('');
-  const [order,         setOrder]        = useState(null);
+  const [order,   setOrder]   = useState(null);
 
   const PAYMENT_METHODS = [
-    { key:'cash',   label:'Espèces à la livraison', icon:Banknote,    desc:'Payez en cash à la réception' },
-    { key:'card',   label:'Carte bancaire',          icon:CreditCard,  desc:'Visa, Mastercard via Stripe' },
-    { key:'mobile', label:'Mobile Money',            icon:Smartphone,  desc:'Orange Money, Moov, Wave — via CinetPay' },
+    { key:'cash',   label:'Espèces à la livraison', icon:Banknote,   desc:'Payez en cash à la réception' },
+    { key:'online', label:'Paiement en ligne',       icon:Smartphone, desc:'Orange Money, Moov Money, Coris Money, carte bancaire — via PayDunya' },
   ];
 
   const handleContinue = async () => {
@@ -91,7 +38,6 @@ export default function Checkout() {
         const res = await api.post('/payment/cash/', {
           address,
           phone,
-          payment_method: 'cash',
         });
         setOrder(res.data);
         await fetchCart();
@@ -102,45 +48,16 @@ export default function Checkout() {
         setLoading(false);
       }
 
-    } else if (method === 'card') {
+    } else if (method === 'online') {
       setLoading(true);
       try {
-        const res = await api.post('/payment/intent/', { address });
-        setClientSecret(res.data.client_secret);
-        const stripe = await loadStripe(res.data.publishable_key);
-        setStripePromise(Promise.resolve(stripe));
-        setStep(2);
-      } catch {
-        setError('Erreur lors de la création du paiement.');
-      } finally {
-        setLoading(false);
-      }
-
-    } else if (method === 'mobile') {
-      setLoading(true);
-      try {
-        const res = await api.post('/payment/cinetpay/', { address, phone });
+        const res = await api.post('/payment/paydunya/init/', { address, phone });
         window.location.href = res.data.payment_url;
       } catch {
-        setError('Erreur lors de la connexion à CinetPay.');
+        setError('Erreur lors de la connexion au paiement en ligne.');
       } finally {
         setLoading(false);
       }
-    }
-  };
-
-  const handleStripeSuccess = async (paymentMethod) => {
-    try {
-      const res = await api.post('/payment/cash/', {
-        address,
-        phone,
-        payment_method: paymentMethod,
-      });
-      setOrder(res.data);
-      await fetchCart();
-      setStep(3);
-    } catch {
-      setError('Erreur lors de la finalisation.');
     }
   };
 
@@ -265,36 +182,15 @@ export default function Checkout() {
           </div>
         )}
 
-        {/* ÉTAPE 2 — STRIPE */}
-        {step === 2 && stripePromise && (
-          <div className="max-w-md mx-auto">
-            <button onClick={() => setStep(1)} className="btn btn-ghost btn-sm mb-6 gap-2">
-              <ArrowLeft size={14}/> Retour
-            </button>
-            <p className="text-xs uppercase tracking-[0.3em] opacity-40 mb-2">Étape 2</p>
-            <h1 className="font-display text-3xl font-light mb-6">Paiement sécurisé</h1>
-            <div className="bg-base-200 p-4 mb-6 flex justify-between text-sm">
-              <span className="opacity-60">Total à payer</span>
-              <span className="font-semibold">{cart.total} FCFA</span>
-            </div>
-            <Elements stripe={stripePromise} options={{ clientSecret }}>
-              <StripeForm clientSecret={clientSecret} onSuccess={handleStripeSuccess}/>
-            </Elements>
-            {error && <div className="alert alert-error text-sm mt-4"><span>{error}</span></div>}
-          </div>
-        )}
-
-        {/* ÉTAPE 3 — SUCCÈS */}
+        {/* ÉTAPE 3 — SUCCÈS (paiement cash uniquement — le paiement en ligne
+            redirige vers PayDunya puis /checkout/confirmation/:orderId) */}
         {step === 3 && (
           <div className="flex flex-col items-center justify-center py-20 gap-6 text-center">
             <CheckCircle size={72} className="text-success"/>
             <div>
               <h2 className="font-display text-4xl font-light mb-2">Commande confirmée !</h2>
               <p className="opacity-50 text-sm">
-                Commande #{order?.id} —{' '}
-                {order?.payment_method === 'cash'
-                  ? 'Paiement en espèces à la livraison'
-                  : 'Paiement par carte'}
+                Commande #{order?.id} — Paiement en espèces à la livraison
               </p>
             </div>
             <p className="opacity-40 text-sm max-w-sm">

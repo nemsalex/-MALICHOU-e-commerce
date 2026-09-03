@@ -7,8 +7,8 @@ from .views import (
     CartView, CartItemView,
     OrderListView, OrderDetailView,
     ContactView,
-    CreatePaymentIntentView, CreateCashOrderView,
-    CinetPayInitView, CinetPayNotifyView,
+    CreateCashOrderView,
+    PayDunyaInitView, PayDunyaConfirmView, PayDunyaNotifyView,
 )
 
 urlpatterns = [
@@ -39,8 +39,8 @@ urlpatterns = [
     path('contact/',         ContactView.as_view(),      name='contact'),
 
     # Paiement
-    path('payment/intent/',          CreatePaymentIntentView.as_view(), name='payment-intent'),
-    path('payment/cash/',            CreateCashOrderView.as_view(),     name='payment-cash'),
-    path('payment/cinetpay/',        CinetPayInitView.as_view(),        name='cinetpay-init'),
-    path('payment/cinetpay/notify/', CinetPayNotifyView.as_view(),      name='cinetpay-notify'),
+    path('payment/cash/',             CreateCashOrderView.as_view(),   name='payment-cash'),
+    path('payment/paydunya/init/',    PayDunyaInitView.as_view(),      name='paydunya-init'),
+    path('payment/paydunya/confirm/', PayDunyaConfirmView.as_view(),   name='paydunya-confirm'),
+    path('payment/paydunya/notify/',  PayDunyaNotifyView.as_view(),    name='paydunya-notify'),
 ]

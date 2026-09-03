@@ -1,12 +1,12 @@
 import threading
+import hashlib
+import json
 from django.contrib.auth.models import User
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import stripe
 import requests as http_requests
 from django.conf import settings
-stripe.api_key = settings.STRIPE_SECRET_KEY
 
 from .models import Category, Product, Cart, CartItem, Order, OrderItem, Review, UserProfile
 from .serializers import (
@@ -273,33 +273,39 @@ class ContactView(APIView):
 
 
 # ─── PAIEMENT ──────────────────────────────────────────
-class CreatePaymentIntentView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request):
-        try:
-            cart = Cart.objects.get(user=request.user)
-        except Cart.DoesNotExist:
-            return Response({'error': 'Panier vide.'}, status=400)
-
-        if not cart.items.exists():
-            return Response({'error': 'Panier vide.'}, status=400)
-
-        amount = int(cart.total * 100)
-        intent = stripe.PaymentIntent.create(
-            amount=amount,
-            currency='xof',
-            metadata={
-                'user_id':  request.user.id,
-                'username': request.user.username,
-            }
+def _create_order_from_cart(user, address, payment_method, clear_cart=True):
+    """clear_cart=False laisse le panier intact : utile quand la création de
+    la commande n'est qu'une étape préalable à un appel externe (PayDunya) qui
+    peut encore échouer — on ne veut pas vider le panier du client pour rien."""
+    cart  = Cart.objects.get(user=user)
+    order = Order.objects.create(
+        user=user,
+        total=cart.total,
+        address=address,
+        status='pending',
+        payment_method=payment_method,
+    )
+    for item in cart.items.all():
+        OrderItem.objects.create(
+            order=order,
+            product=item.product,
+            size=item.size,
+            quantity=item.quantity,
+            price=item.product.price,
         )
+    if clear_cart:
+        cart.items.all().delete()
+    return order
 
-        return Response({
-            'client_secret':   intent.client_secret,
-            'amount':          amount,
-            'publishable_key': settings.STRIPE_PUBLISHABLE_KEY,
-        })
+
+def _send_order_emails(order):
+    def send_emails():
+        try:
+            send_order_confirmation(order)
+            send_order_notification_admin(order)
+        except Exception:
+            pass
+    threading.Thread(target=send_emails, daemon=True).start()
 
 
 class CreateCashOrderView(APIView):
@@ -314,40 +320,63 @@ class CreateCashOrderView(APIView):
         if not cart.items.exists():
             return Response({'error': 'Panier vide.'}, status=400)
 
-        address        = request.data.get('address', '')
-        payment_method = request.data.get('payment_method', 'cash')
-
-        order = Order.objects.create(
-            user=request.user,
-            total=cart.total,
-            address=address,
-            status='pending',
-            payment_method=payment_method,
-        )
-
-        for item in cart.items.all():
-            OrderItem.objects.create(
-                order=order,
-                product=item.product,
-                size=item.size,
-                quantity=item.quantity,
-                price=item.product.price,
-            )
-
-        cart.items.all().delete()
-
-        def send_emails():
-            try:
-                send_order_confirmation(order)
-                send_order_notification_admin(order)
-            except Exception:
-                pass
-        threading.Thread(target=send_emails, daemon=True).start()
+        address = request.data.get('address', '')
+        order   = _create_order_from_cart(request.user, address, payment_method='cash')
+        _send_order_emails(order)
 
         return Response(OrderSerializer(order).data, status=201)
 
 
-class CinetPayInitView(APIView):
+# ─── PAYDUNYA (Mobile Money / carte — Burkina Faso & Afrique de l'Ouest) ──
+def paydunya_base_url():
+    if settings.PAYDUNYA_MODE == 'live':
+        return "https://app.paydunya.com/api/v1"
+    return "https://app.paydunya.com/sandbox-api/v1"
+
+
+def paydunya_headers():
+    return {
+        "Content-Type":         "application/json",
+        "PAYDUNYA-MASTER-KEY":  settings.PAYDUNYA_MASTER_KEY,
+        "PAYDUNYA-PRIVATE-KEY": settings.PAYDUNYA_PRIVATE_KEY,
+        "PAYDUNYA-PUBLIC-KEY":  settings.PAYDUNYA_PUBLIC_KEY,
+        "PAYDUNYA-TOKEN":       settings.PAYDUNYA_TOKEN,
+    }
+
+
+def _apply_paydunya_status(order, result):
+    """Met à jour la commande à partir d'une réponse confirm() de PayDunya.
+    On ne fait jamais confiance à un statut reçu sans l'avoir revérifié auprès
+    de l'API PayDunya elle-même (hash + montant), pour éviter qu'un tiers ne
+    forge une notification de paiement."""
+    if result.get('response_code') != '00':
+        return order
+
+    expected_hash = hashlib.sha512(settings.PAYDUNYA_MASTER_KEY.encode()).hexdigest()
+    if result.get('hash') != expected_hash:
+        return order
+
+    invoice = result.get('invoice') or {}
+    try:
+        if int(float(invoice.get('total_amount', 0))) != int(order.total):
+            return order
+    except (TypeError, ValueError):
+        return order
+
+    status = result.get('status')
+    if status == 'completed' and order.payment_status != 'paid':
+        order.payment_status = 'paid'
+        order.status         = 'confirmed'
+        order.save(update_fields=['payment_status', 'status'])
+        _send_order_emails(order)
+    elif status in ('cancelled', 'failed') and order.status == 'pending':
+        order.status = 'cancelled'
+        order.save(update_fields=['status'])
+
+    return order
+
+
+class PayDunyaInitView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -359,86 +388,124 @@ class CinetPayInitView(APIView):
         if not cart.items.exists():
             return Response({'error': 'Panier vide.'}, status=400)
 
-        address        = request.data.get('address', '')
-        transaction_id = f"MALICHOU-{request.user.id}-{int(__import__('time').time())}"
-        amount         = int(cart.total)
+        address = request.data.get('address', '')
+        phone   = request.data.get('phone', '')
+
+        order = _create_order_from_cart(request.user, address, payment_method='online', clear_cart=False)
 
         payload = {
-            "apikey":         settings.CINETPAY_API_KEY,
-            "site_id":        settings.CINETPAY_SITE_ID,
-            "transaction_id": transaction_id,
-            "amount":         amount,
-            "currency":       "XOF",
-            "description":    "Commande MALICHOU",
-            "return_url":     "https://malichou-e-commerce.vercel.app/checkout/success",
-            "notify_url":     "https://malichou-e-commerce-production.up.railway.app/api/payment/cinetpay/notify/",
-            "customer_name":  request.user.username,
-            "customer_email": request.user.email,
+            "invoice": {
+                "total_amount": int(order.total),
+                "description":  f"Commande MALICHOU #{order.id}",
+                "customer": {
+                    "name":  request.user.username,
+                    "email": request.user.email,
+                    "phone": phone,
+                },
+            },
+            "store": {
+                "name": "MALICHOU",
+            },
+            "custom_data": {
+                "order_id": order.id,
+            },
+            "actions": {
+                "cancel_url":   f"{settings.FRONTEND_URL}/checkout?cancelled=1",
+                "return_url":   f"{settings.FRONTEND_URL}/checkout/confirmation/{order.id}",
+                "callback_url": f"{settings.BACKEND_URL}/api/payment/paydunya/notify/",
+            },
         }
 
         try:
-            res = http_requests.post(
-                "https://api-checkout.cinetpay.com/v2/payment",
-                json=payload
+            res  = http_requests.post(
+                f"{paydunya_base_url()}/checkout-invoice/create",
+                json=payload, headers=paydunya_headers(), timeout=15,
             )
             data = res.json()
-
-            if data.get('code') == '201':
-                request.session['cinetpay_transaction_id'] = transaction_id
-                request.session['cinetpay_address']        = address
-                return Response({
-                    'payment_url':    data['data']['payment_url'],
-                    'transaction_id': transaction_id,
-                })
-            else:
-                return Response({'error': data.get('message', 'Erreur CinetPay')}, status=400)
-
         except Exception as e:
-            return Response({'error': str(e)}, status=500)
+            order.delete()
+            return Response({'error': f"Impossible de contacter PayDunya : {e}"}, status=502)
+
+        if data.get('response_code') == '00':
+            order.payment_ref = data.get('token', '')
+            order.save(update_fields=['payment_ref'])
+            cart.items.all().delete()
+            return Response({
+                'payment_url': data.get('response_text'),
+                'order_id':    order.id,
+            })
+        else:
+            order.delete()
+            return Response({'error': data.get('response_text', 'Erreur PayDunya')}, status=400)
 
 
-class CinetPayNotifyView(APIView):
+class PayDunyaConfirmView(APIView):
+    """Appelée par le frontend au retour de la page de paiement PayDunya
+    (return_url). On revérifie toujours le paiement en direct auprès de
+    PayDunya — jamais via les paramètres de l'URL de retour, qui pourraient
+    être falsifiés par le client."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            order = Order.objects.get(id=request.data.get('order_id'), user=request.user)
+        except Order.DoesNotExist:
+            return Response({'error': 'Commande introuvable.'}, status=404)
+
+        if not order.payment_ref:
+            return Response({'error': "Cette commande n'a pas de paiement en ligne associé."}, status=400)
+
+        try:
+            res    = http_requests.get(
+                f"{paydunya_base_url()}/checkout-invoice/confirm/{order.payment_ref}",
+                headers=paydunya_headers(), timeout=15,
+            )
+            result = res.json()
+        except Exception as e:
+            return Response({'error': f"Impossible de vérifier le paiement : {e}"}, status=502)
+
+        order = _apply_paydunya_status(order, result)
+        return Response(OrderSerializer(order).data)
+
+
+class PayDunyaNotifyView(APIView):
+    """IPN PayDunya : filet de sécurité si le client ne revient jamais sur le
+    site après avoir payé (ex: paiement Mobile Money validé plus tard par
+    USSD). On ne se sert du contenu du POST que pour retrouver le token de
+    la facture, puis on revérifie tout auprès de l'API confirm() PayDunya."""
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        transaction_id = request.data.get('cpm_trans_id')
-        status         = request.data.get('cpm_result')
+        token = (
+            request.POST.get('data[invoice][token]')
+            or request.POST.get('token')
+            or (request.data.get('token') if hasattr(request.data, 'get') else None)
+        )
+        if not token:
+            raw = request.POST.get('data')
+            if raw:
+                try:
+                    parsed = json.loads(raw)
+                    token  = (parsed.get('invoice') or {}).get('token') or parsed.get('token')
+                except (ValueError, AttributeError):
+                    token = None
 
-        if status == '00':
-            try:
-                user_id = transaction_id.split('-')[1]
-                user    = User.objects.get(id=user_id)
-                cart    = Cart.objects.get(user=user)
+        if not token:
+            return Response({'message': 'OK'})
 
-                order = Order.objects.create(
-                    user=user,
-                    total=cart.total,
-                    address='',
-                    payment_method='mobile',
-                    payment_status='paid',
-                    status='confirmed',
-                )
+        try:
+            order = Order.objects.get(payment_ref=token)
+        except Order.DoesNotExist:
+            return Response({'message': 'OK'})
 
-                for item in cart.items.all():
-                    OrderItem.objects.create(
-                        order=order,
-                        product=item.product,
-                        size=item.size,
-                        quantity=item.quantity,
-                        price=item.product.price,
-                    )
-
-                cart.items.all().delete()
-
-                def send_emails():
-                    try:
-                        send_order_confirmation(order)
-                        send_order_notification_admin(order)
-                    except Exception:
-                        pass
-                threading.Thread(target=send_emails, daemon=True).start()
-
-            except Exception as e:
-                return Response({'error': str(e)}, status=500)
+        try:
+            res    = http_requests.get(
+                f"{paydunya_base_url()}/checkout-invoice/confirm/{token}",
+                headers=paydunya_headers(), timeout=15,
+            )
+            result = res.json()
+            _apply_paydunya_status(order, result)
+        except Exception:
+            pass
 
         return Response({'message': 'OK'})
