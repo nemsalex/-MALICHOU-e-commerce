@@ -3,7 +3,6 @@ from datetime import timedelta
 import os
 import dj_database_url
 from dotenv import load_dotenv
-import cloudinary
 
 load_dotenv()
 
@@ -33,8 +32,6 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'store',
-    'cloudinary_storage',
-    'cloudinary',
 ]
 
 MIDDLEWARE = [
@@ -164,15 +161,14 @@ CSRF_TRUSTED_ORIGINS = [
 
 
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY':    os.getenv('CLOUDINARY_API_KEY'),
-    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
-}
+# ─── STOCKAGE MEDIA (Supabase Storage) ─────────────────
+SUPABASE_URL              = os.getenv('SUPABASE_URL')
+SUPABASE_SERVICE_ROLE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+SUPABASE_STORAGE_BUCKET   = os.getenv('SUPABASE_STORAGE_BUCKET', 'products')
 
 STORAGES = {
     'default': {
-        'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+        'BACKEND': 'store.storage.SupabaseStorage',
     },
     'staticfiles': {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
