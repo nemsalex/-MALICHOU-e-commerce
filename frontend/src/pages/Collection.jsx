@@ -17,10 +17,9 @@ const parseArray = (val) => {
 };
 
 const CATEGORY_EMOJI = {
-  'strings-tangas':      '🩲',
-  'soutiens-gorge':        '👙',
-  'nuisettes-deshabilles': '🔥',
-  'ensembles':             '🩱'
+  'nuisettes': '🔥',
+  'strings':   '🩲',
+  'ensembles': '🩱',
 };
 
 const COLORS = ['Noir', 'Blanc', 'Rouge', 'Rose', 'Beige', 'Bordeaux'];
@@ -44,7 +43,20 @@ export default function Collection() {
   const [priceRange,    setPriceRange]    = useState([0, 100000]);
   const [search,        setSearch]        = useState('');
   const [sortBy,        setSortBy]        = useState('default');
-  const [showFilters,   setShowFilters]   = useState(true);
+  const [showFilters,   setShowFilters]   = useState(false);
+  const [isDesktop,     setIsDesktop]     = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  );
+
+  // Tailwind est charge via le CDN "Play" (voir index.html), qui ne recalcule
+  // pas toujours correctement une classe transform togglee dynamiquement.
+  // On pilote donc le tiroir mobile via un style inline, plus fiable.
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const handler = (e) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   // SECTIONS SIDEBAR OUVERTES
   const [openSections, setOpenSections] = useState({
@@ -213,10 +225,28 @@ export default function Collection() {
 
         <div className="flex gap-8">
 
-          {/* SIDEBAR FILTRES */}
-          <aside className={`w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden'} lg:block`}>
-            <div className="sticky top-24">
-              <div className="flex items-center justify-between mb-6">
+          {/* FOND SOMBRE (mobile uniquement, ferme le tiroir) */}
+          {showFilters && (
+            <div className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+              onClick={() => setShowFilters(false)}/>
+          )}
+
+          {/* SIDEBAR FILTRES — tiroir plein ecran sur mobile, colonne fixe sur desktop */}
+          <aside
+            style={{ transform: isDesktop ? 'none' : (showFilters ? 'translateX(0)' : 'translateX(-100%)') }}
+            className={`
+              fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-base-100 overflow-y-auto p-6
+              transition-transform duration-300
+              lg:static lg:z-auto lg:w-64 lg:flex-shrink-0 lg:p-0 lg:max-w-none lg:overflow-visible
+            `}>
+            <div className="flex items-center justify-between mb-6 lg:hidden">
+              <p className="font-display text-lg">Filtres</p>
+              <button onClick={() => setShowFilters(false)} className="btn btn-ghost btn-sm btn-circle">
+                <X size={18}/>
+              </button>
+            </div>
+            <div className="lg:sticky lg:top-24">
+              <div className="hidden lg:flex items-center justify-between mb-6">
                 <p className="text-xs uppercase tracking-widest opacity-40 flex items-center gap-2">
                   <SlidersHorizontal size={12}/> Filtres
                 </p>

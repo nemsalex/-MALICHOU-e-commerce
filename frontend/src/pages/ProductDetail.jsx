@@ -18,10 +18,9 @@ const parseArray = (val) => {
 };
 
 const CATEGORY_EMOJI = {
-  'strings-tangas':        '🩲',
-  'soutiens-gorge':        '👙',
-  'nuisettes-deshabilles': '🔥',
-  'ensembles':              '🩱',
+  'nuisettes': '🔥',
+  'strings':   '🩲',
+  'ensembles': '🩱',
 };
 
 export default function ProductDetail() {

@@ -52,9 +52,17 @@ class UserSerializer(serializers.ModelSerializer):
 
 # ─── CATEGORIES ────────────────────────────────────────
 class CategorySerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model  = Category
-        fields = ('id', 'name', 'slug',)
+        fields = ('id', 'name', 'slug', 'image')
+
+    def get_image(self, obj):
+        product = obj.products.filter(is_active=True).exclude(image='').first()
+        if product and product.image:
+            return product.image.url
+        return None
 
 
 # ─── PRODUITS ──────────────────────────────────────────

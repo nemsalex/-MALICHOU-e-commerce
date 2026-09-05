@@ -12,17 +12,15 @@ import {
 import logo from '../assets/logo.png';
 
 const CATEGORY_EMOJI = {
- 'strings-tangas':         '🩲',
-  'soutiens-gorge':        '👙',
-  'nuisettes-deshabilles': '🔥',
-  'ensemble':              '🩱',
+  'nuisettes': '🔥',
+  'strings':   '🩲',
+  'ensembles': '🩱',
 };
 
 const CATEGORY_DESC = {
-  'strings-tangas':        'Légèreté & sensualité',
-  'soutiens-gorge':        'Maintien & élégance',
-  'ensemble':             'Coordonnés & raffinés',
-  'nuisettes-deshabilles': 'Douceur & séduction',
+  'nuisettes': 'Douceur & séduction',
+  'strings':   'Légèreté & sensualité',
+  'ensembles': 'Coordonnés & raffinés',
 };
 
 const parseArray = (val) => {
@@ -215,21 +213,34 @@ export default function Home() {
         <h2 className="font-display text-4xl font-light text-center mb-10 animate-fade-in-up">
           Catégories
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {categories.map((c, i) => (
             <button key={c.id}
               onClick={() => {
                 setFilter(c.slug);
                 document.getElementById('catalogue')?.scrollIntoView({ behavior:'smooth' });
               }}
-              className={`group card bg-base-200 hover:bg-base-300 transition-all p-6 text-center cursor-pointer border border-base-300 hover:border-primary animate-fade-in-up delay-${i * 100}`}>
-              <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">
-                {CATEGORY_EMOJI[c.slug] || '✨'}
+              className={`group relative h-64 overflow-hidden rounded text-left cursor-pointer animate-fade-in-up delay-${i * 100}`}>
+              {c.image ? (
+                <img src={c.image} alt={c.name}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"/>
+              ) : (
+                <div className="absolute inset-0 bg-base-300 flex items-center justify-center text-6xl opacity-30">
+                  {CATEGORY_EMOJI[c.slug] || '✨'}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent
+                group-hover:from-black/90 transition-all duration-300"/>
+              <div className="absolute inset-x-0 bottom-0 p-6">
+                <p className="font-display text-2xl text-white font-light mb-1">{c.name}</p>
+                <p className="text-xs uppercase tracking-widest text-white/60 group-hover:text-white/90 transition-colors">
+                  {CATEGORY_DESC[c.slug] || ''}
+                </p>
               </div>
-              <p className="text-sm font-medium leading-tight mb-1">{c.name}</p>
-              <p className="text-xs opacity-40 group-hover:opacity-70 transition-opacity italic">
-                {CATEGORY_DESC[c.slug] || ''}
-              </p>
+              <div className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm
+                flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <ArrowRight size={16} className="text-white"/>
+              </div>
             </button>
           ))}
         </div>
