@@ -8,7 +8,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
@@ -18,7 +18,6 @@ ALLOWED_HOSTS = [
     '.railway.app',
     '.vercel.app',
     '.onrender.com',
-    '*',
 ]
 
 INSTALLED_APPS = [

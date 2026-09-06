@@ -7,7 +7,7 @@ from .emails import send_welcome_email, send_new_user_notification
 
 # ─── AUTH ──────────────────────────────────────────────
 class RegisterSerializer(serializers.ModelSerializer):
-    password  = serializers.CharField(write_only=True, min_length=6)
+    password  = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True)
     phone     = serializers.CharField(write_only=True, required=False, allow_blank=True)
 

@@ -28,6 +28,7 @@ export default function Profile() {
   const [form, setForm] = useState({
     email: '',
     phone: '',
+    current_password: '',
   });
 
   const [pwdForm, setPwdForm] = useState({
@@ -41,6 +42,7 @@ export default function Profile() {
       setForm({
         email: user.email  || '',
         phone: user.phone  || '',
+        current_password: '',
       });
       api.get('/orders/').then(r => setOrders(r.data));
     }
@@ -58,8 +60,9 @@ export default function Profile() {
       await api.patch('/auth/profile/', form);
       showToast('Profil mis à jour avec succès !');
       setEditMode(false);
-    } catch {
-      showToast('Erreur lors de la mise à jour.', 'error');
+      setForm(f => ({ ...f, current_password: '' }));
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Erreur lors de la mise à jour.', 'error');
     } finally {
       setLoadingInfo(false);
     }
@@ -216,6 +219,20 @@ export default function Profile() {
                     </p>
                   )}
                 </div>
+
+                {editMode && form.email !== (user.email || '') && (
+                  <div>
+                    <p className="text-xs uppercase tracking-widest opacity-40 mb-2 flex items-center gap-2">
+                      <Lock size={11}/> Mot de passe actuel (requis pour changer d'email)
+                    </p>
+                    <input
+                      type="password"
+                      className="input input-bordered w-full"
+                      value={form.current_password}
+                      onChange={e => setForm({...form, current_password: e.target.value})}
+                    />
+                  </div>
+                )}
 
                 {editMode && (
                   <button

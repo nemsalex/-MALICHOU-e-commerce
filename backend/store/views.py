@@ -2,6 +2,7 @@ import threading
 import hashlib
 import json
 from django.contrib.auth.models import User
+from django.db.models import F
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -49,7 +50,12 @@ class UpdateProfileView(APIView):
         if phone:
             profile.phone = phone
             profile.save()
-        if email:
+        if email and email != request.user.email:
+            current_password = request.data.get('current_password', '')
+            if not request.user.check_password(current_password):
+                return Response({'error': 'Mot de passe actuel requis pour changer d\'email.'}, status=400)
+            if User.objects.filter(email=email).exclude(id=request.user.id).exists():
+                return Response({'error': 'Cet email est déjà utilisé par un autre compte.'}, status=400)
             request.user.email = email
             request.user.save()
         return Response(UserSerializer(request.user).data)
@@ -63,8 +69,8 @@ class ChangePasswordView(APIView):
         new_password = request.data.get('new_password', '')
         if not request.user.check_password(old_password):
             return Response({'error': 'Ancien mot de passe incorrect.'}, status=400)
-        if len(new_password) < 6:
-            return Response({'error': 'Le mot de passe doit faire au moins 6 caractères.'}, status=400)
+        if len(new_password) < 8:
+            return Response({'error': 'Le mot de passe doit faire au moins 8 caractères.'}, status=400)
         request.user.set_password(new_password)
         request.user.save()
         return Response({'message': 'Mot de passe modifié avec succès.'})
@@ -277,11 +283,26 @@ class ContactView(APIView):
 
 
 # ─── PAIEMENT ──────────────────────────────────────────
+class InsufficientStockError(Exception):
+    def __init__(self, product_name):
+        self.product_name = product_name
+        super().__init__(f"Stock insuffisant pour {product_name}.")
+
+
 def _create_order_from_cart(user, address, payment_method, clear_cart=True):
     """clear_cart=False laisse le panier intact : utile quand la création de
     la commande n'est qu'une étape préalable à un appel externe (PayDunya) qui
-    peut encore échouer — on ne veut pas vider le panier du client pour rien."""
+    peut encore échouer — on ne veut pas vider le panier du client pour rien.
+
+    Vérifie le stock disponible avant de créer quoi que ce soit (tout ou
+    rien), puis le décrémente de façon atomique pour chaque article."""
     cart  = Cart.objects.get(user=user)
+    items = list(cart.items.select_related('product').all())
+
+    for item in items:
+        if item.quantity > item.product.stock:
+            raise InsufficientStockError(item.product.name)
+
     order = Order.objects.create(
         user=user,
         total=cart.total,
@@ -289,7 +310,7 @@ def _create_order_from_cart(user, address, payment_method, clear_cart=True):
         status='pending',
         payment_method=payment_method,
     )
-    for item in cart.items.all():
+    for item in items:
         OrderItem.objects.create(
             order=order,
             product=item.product,
@@ -297,9 +318,17 @@ def _create_order_from_cart(user, address, payment_method, clear_cart=True):
             quantity=item.quantity,
             price=item.product.price,
         )
+        Product.objects.filter(id=item.product_id).update(stock=F('stock') - item.quantity)
+
     if clear_cart:
         cart.items.all().delete()
     return order
+
+
+def _restore_stock(order):
+    """Recredite le stock des articles d'une commande annulee/echouee."""
+    for item in order.items.select_related('product').all():
+        Product.objects.filter(id=item.product_id).update(stock=F('stock') + item.quantity)
 
 
 def _send_order_emails(order):
@@ -325,7 +354,10 @@ class CreateCashOrderView(APIView):
             return Response({'error': 'Panier vide.'}, status=400)
 
         address = request.data.get('address', '')
-        order   = _create_order_from_cart(request.user, address, payment_method='cash')
+        try:
+            order = _create_order_from_cart(request.user, address, payment_method='cash')
+        except InsufficientStockError as e:
+            return Response({'error': str(e)}, status=400)
         _send_order_emails(order)
 
         return Response(OrderSerializer(order).data, status=201)
@@ -376,6 +408,7 @@ def _apply_paydunya_status(order, result):
     elif status in ('cancelled', 'failed') and order.status == 'pending':
         order.status = 'cancelled'
         order.save(update_fields=['status'])
+        _restore_stock(order)
 
     return order
 
@@ -395,7 +428,10 @@ class PayDunyaInitView(APIView):
         address = request.data.get('address', '')
         phone   = request.data.get('phone', '')
 
-        order = _create_order_from_cart(request.user, address, payment_method='online', clear_cart=False)
+        try:
+            order = _create_order_from_cart(request.user, address, payment_method='online', clear_cart=False)
+        except InsufficientStockError as e:
+            return Response({'error': str(e)}, status=400)
 
         payload = {
             "invoice": {
@@ -427,6 +463,7 @@ class PayDunyaInitView(APIView):
             )
             data = res.json()
         except Exception as e:
+            _restore_stock(order)
             order.delete()
             return Response({'error': f"Impossible de contacter PayDunya : {e}"}, status=502)
 
@@ -439,6 +476,7 @@ class PayDunyaInitView(APIView):
                 'order_id':    order.id,
             })
         else:
+            _restore_stock(order)
             order.delete()
             return Response({'error': data.get('response_text', 'Erreur PayDunya')}, status=400)
 
